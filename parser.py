@@ -5,8 +5,8 @@ from pygments.formatters import HtmlFormatter, Terminal256Formatter
 import os
 
 STYLE = 'native'
-ROOT_DIR = '.'
-OUT_DIR = 'out/'
+ROOT_DIR = os.path.abspath('.')
+OUT_DIR = os.path.abspath('out/')
 LEGAL_FILES = ['.py', '.rs', '.c', '.cpp', '.h', '.cs']
 
 
@@ -17,13 +17,11 @@ def isFileEndingMatch(file_name, ending):
     return True
 
 def writeStringToFile(file, buf, fileEnding):
-    directory = os.path.dirname(OUT_DIR)
     if not os.path.exists(OUT_DIR):
         os.makedirs(OUT_DIR)
 
-    with open(OUT_DIR+os.path.basename(file)+'.'+fileEnding, 'w') as f:
+    with open(OUT_DIR+"/"+os.path.basename(file)+'.'+fileEnding, 'w') as f:
         f.write(buf)
-        f.close()
 
 def findTagsInFile(text, tag):
     lines = []
@@ -53,7 +51,7 @@ def getAllValidFiles(whiteList, rootDir):
         for f in files:
             for ending in whiteList:
                 if isFileEndingMatch(f,ending):
-                    filePaths.append(root+'\\'+f)
+                    filePaths.append(root+'/'+f)
     return filePaths
 
 def parseTODO():
