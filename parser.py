@@ -94,20 +94,40 @@ def parseStats(fileName, text):
         if len(line) == 0:
             emptyLineCount += 1
     return {
-        "fileName": fileName,
         "emptyLineCount": emptyLineCount,
         "totalLineCount": lineNum + 1,
     }
 
 
-def statsToMdString(fileStats):
-    ''' returns a string of a markdown representation for tagDict '''
+def statsToMdString(statsDict):
+    ''' returns a string of a markdown representation for statsDict '''
     buf = ''
-    for key in fileStats:
+    for key in statsDict:
         buf += f'#  {key}\n'
-        buf += f'* line count: {fileStats[key]["totalLineCount"]}\n'
+        buf += f'* total line count: {statsDict[key]["totalLineCount"]}\n'
+        buf += f'* empty line count: {statsDict[key]["emptyLineCount"]}\n'
+        buf += f'* code  line count: {statsDict[key]["totalLineCount"] - statsDict[key]["emptyLineCount"]}\n'
         buf += '\n'
     return buf
+
+def statsToHtmlString(statsDict, key=None):
+    ''' returns a string of a html representation for statsDict '''
+    buf = ''
+    if key:
+        statsDict = {key: statsDict[key]}
+
+    for key in statsDict:
+        buf += "<div>"
+        buf += f'<h5>Total: {statsDict[key]["totalLineCount"]}</h5>\n'
+        buf += f'<h5>Empty: {statsDict[key]["emptyLineCount"]}</h5>\n'
+        buf += f'<h5>Loc: {statsDict[key]["totalLineCount"] - statsDict[key]["emptyLineCount"]}</h5>\n'
+        buf += "</div>"
+    return buf
+
+def tokenTest(lexer, code):
+    ''' token test '''
+    for index, token, vlue in lexer.get_tokens_unprocessed(code):
+        print(index, token, vlue)
 
 
 def srcToHtml():
@@ -122,17 +142,17 @@ def srcToHtml():
         code = open(filePath).read()
         allFilesBuf += f"<h2>{title}</h2>\n"
         fileStats[fileName] = parseStats(fileName, code)
-        allFilesBuf += f'<h3>Loc: {fileStats[fileName]["totalLineCount"]}</h3>\n'
-        allFilesBuf += highlight(code, lexer, HtmlFormatter())
+        allFilesBuf += statsToHtmlString(fileStats, key=fileName)
 
+        # tokenTest(lexer, code)
+        allFilesBuf += highlight(code, lexer, HtmlFormatter())
         # print(highlight(code, lexer, Terminal256Formatter(style=STYLE)))
 
     writeStringToFile("source",
                       HTML_TEMPLATE.format(
                           cssfile=f"style/{STYLE}.css", body=allFilesBuf, title=os.path.basename(ROOT_DIR)),
                       'html')
-    writeStringToFile('stats', statsToMdString(
-        fileStats), 'md', dir=f"{OUT_DIR}/meta")
+    writeStringToFile('stats', statsToMdString(fileStats), 'md', dir=f"{OUT_DIR}/meta")
 
 
 def writeAllStylesToCss(name=None):
