@@ -2,6 +2,7 @@ from pygments import highlight, format, lex
 from pygments.lexers import get_lexer_for_filename
 from pygments.styles import get_all_styles
 from pygments.formatters import HtmlFormatter, Terminal256Formatter
+from TSWrapper import TSWrapper
 
 import os
 import re
@@ -228,6 +229,17 @@ def parseTODO():
 
 
 if __name__ == '__main__':
-    writeAllStylesToCss()
-    srcToHtml()
-    parseTODO()
+    from pprint import pprint
+
+    # writeAllStylesToCss()
+    # srcToHtml()
+    # parseTODO()
+
+    validFilePaths = getAllValidFiles(LEGAL_FILES, ROOT_DIR)
+    tsWrapper = TSWrapper()
+    funcs = []
+    tsWrapper.parseCode(open(validFilePaths[0]).read())
+    funcs.append(tsWrapper.getFunctions())
+    tsWrapper.parseCode(open(validFilePaths[1]).read())
+    funcs.append(tsWrapper.getFunctions())
+    pprint(funcs)
