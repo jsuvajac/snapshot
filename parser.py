@@ -1,5 +1,6 @@
 from pygments import highlight, format, lex
 from pygments.lexers import get_lexer_for_filename
+from pygments.styles import get_all_styles
 from pygments.formatters import HtmlFormatter, Terminal256Formatter
 
 import os
@@ -9,7 +10,17 @@ STYLE = 'monokai'
 ROOT_DIR = os.path.abspath('.')
 OUT_DIR = os.path.abspath('out/')
 LEGAL_FILES = ['.py', '.rs', '.c', '.cpp', '.h', '.cs']
-
+SCRIPT = '''\
+  <script>
+    function updateCss() {
+      let newVal = document.getElementById('styleId').value;
+      let link = document.getElementsByTagName('link')[0];
+      console.log(link);
+      console.log(newVal);
+      link.href = newVal;
+    }
+  </script>
+'''
 HTML_TEMPLATE = '''\
 <!DOCTYPE html>
 <html>
@@ -19,6 +30,10 @@ HTML_TEMPLATE = '''\
   <link rel="stylesheet" href="{cssfile}" type="text/css">
 </head>
 <body>
+<label for="styles">Choose syntax color style:</label>
+<select name="styles" id="styleId" onchange="updateCss()">
+  {options}
+</select>
 {body}
 </body>
 </html>
@@ -110,6 +125,7 @@ def statsToMdString(statsDict):
         buf += '\n'
     return buf
 
+
 def statsToHtmlString(statsDict, key=None):
     ''' returns a string of a html representation for statsDict '''
     buf = ''
@@ -124,6 +140,7 @@ def statsToHtmlString(statsDict, key=None):
         buf += "</div>"
     return buf
 
+
 def tokenTest(lexer, code):
     ''' token test '''
     for index, token, vlue in lexer.get_tokens_unprocessed(code):
@@ -131,7 +148,7 @@ def tokenTest(lexer, code):
 
 
 def srcToHtml():
-    ''' parse all legal files and write syntax highlighted code to source.html '''
+    ''' generate an html file with all of the source code, stats for each file and dynamic syntax highlighting'''
     validFilePaths = getAllValidFiles(LEGAL_FILES, ROOT_DIR)
     allFilesBuf = ""
     fileStats = {}
@@ -148,31 +165,43 @@ def srcToHtml():
         allFilesBuf += highlight(code, lexer, HtmlFormatter())
         # print(highlight(code, lexer, Terminal256Formatter(style=STYLE)))
 
-    writeStringToFile("source",
-                      HTML_TEMPLATE.format(
-                          cssfile=f"style/{STYLE}.css", body=allFilesBuf, title=os.path.basename(ROOT_DIR)),
-                      'html')
-    writeStringToFile('stats', statsToMdString(fileStats), 'md', dir=f"{OUT_DIR}/meta")
+    allStyleOptions = "\n".join(
+        [f'<option value="style/{style}.css">{style}</option>' for style in list(get_all_styles())])
+
+    htmlString = HTML_TEMPLATE.format(
+        cssfile=f"style/{STYLE}.css", body=allFilesBuf, title=os.path.basename(ROOT_DIR), options=allStyleOptions)
+
+    headEndIndex = htmlString.find('</head>')
+    htmlString = htmlString[:headEndIndex] + \
+        f'{SCRIPT}</head>' + htmlString[headEndIndex+len('</head>'):]
+
+    writeStringToFile("source", htmlString, 'html')
+    writeStringToFile('stats', statsToMdString(
+        fileStats), 'md', dir=f"{OUT_DIR}/meta")
 
 
 def writeAllStylesToCss(name=None):
     ''' write all default styles into out/style/* as css files '''
-    from pygments.styles import get_all_styles
     if name is None:
         allStyles = list(get_all_styles())
     else:
         allStyles = [name]
     for style in allStyles:
         cssStr = HtmlFormatter(style=style).get_style_defs(".highlight")
-        cssStr = CSS_GLOBAL + cssStr
-        # find the code block background color and injecti it as the body color
-        # pattern = re.compile(r'\.highlight  \{.*\}')
-        # match = pattern.search(cssStr)
 
-        # cssStr = cssStr[:match.start()] + \
-        #     match[0].replace(".highlight", "body") + '\n' + \
-        #     match[0] + \
-        #     cssStr[match.end():]
+        # find the code block background color and inject black as text color if it does not exist
+        pattern = re.compile(r'\.highlight  \{.*\}')
+        match = pattern.search(cssStr)
+
+        if 'color' not in match[0]:
+            toReplace = match[0].replace(' }', ' color: #000000 }')
+        else:
+            toReplace = match[0]
+
+        cssStr = cssStr[:match.start()] + \
+            CSS_GLOBAL + \
+            toReplace + \
+            cssStr[match.end():]
 
         if not os.path.exists(f'{OUT_DIR}/style/{style}.css'):
             writeStringToFile(style, cssStr, "css", dir=f"{OUT_DIR}/style")
@@ -195,7 +224,7 @@ def parseTODO():
             todos[os.path.basename(file)] = todo_tags
 
     writeStringToFile('todos', tagsToMdString(
-        todos), 'md', dir=f"{OUT_DIR}/meta")
+        todos), 'md', dir=f'{OUT_DIR}/meta')
 
 
 if __name__ == '__main__':
