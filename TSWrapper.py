@@ -3,6 +3,10 @@ from pprint import pprint
 
 import os
 
+'''
+tree_sitter api: https://github.com/tree-sitter/py-tree-sitter/blob/master/tree_sitter/binding.c
+'''
+
 PY_LANGUAGE = Language('build/my-languages.so', 'python')
 
 
