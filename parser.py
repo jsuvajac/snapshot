@@ -17,7 +17,9 @@ if __name__ == '__main__':
     # srcToHtml(validFilePaths, ROOT_DIR, OUT_DIR)
     # todos = parseTODO(validFilePaths, OUT_DIR)
 
-    # funcs = {}
-    # for path in validFilePaths:
-    #     temp = TSWrapper(open(path).read())
-    #     funcs[path] = temp.getFunctions()
+    funcs = {}
+    ts = TSWrapper()
+    ts.parseCode(validFilePaths[0])
+    funcs[validFilePaths[0]] = ts.getFunctions()
+
+    print(funcs)

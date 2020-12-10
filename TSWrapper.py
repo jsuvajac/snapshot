@@ -7,8 +7,7 @@ import os
 tree_sitter api: https://github.com/tree-sitter/py-tree-sitter/blob/master/tree_sitter/binding.c
 '''
 
-PY_LANGUAGE = Language('build/my-languages.so', 'python')
-
+LANG_LIST = ['python', 'c', 'cpp', 'c_sharp', 'rust', 'javascript']
 
 def __formatTreeStr(tree):
     ''' temp stringifyer for parse tree '''
@@ -26,22 +25,42 @@ def __formatTreeStr(tree):
         out += char
     return "".join(out)
 
+def getLang(path):
+    ''' return appropriate language for a file given path '''
+    ending = path.split('.')[-1]
+    if ending in ['cpp', 'h', 'cc', 'hh', 'hpp']:
+        return Language('build/my-languages.so', 'cpp')
+    elif ending in ['c']:
+        return Language('build/my-languages.so', 'c')
+    elif ending in ['py']:
+        return Language('build/my-languages.so', 'python')
+    elif ending in ['cs']:
+        return Language('build/my-languages.so', 'c_sharp')
+    elif ending in ['rs']:
+        return Language('build/my-languages.so', 'rust')
+    elif ending in ['js']:
+        return Language('build/my-languages.so', 'javascript')
+    else:
+        raise Exception
+
 
 class TSWrapper:
-    def __init__(self, code=None):
+    def __init__(self):
         if not os.path.exists('build/my-languages.so'):
             Language.build_library(
                 'build/my-languages.so',
                 [
+                    'vendor/tree-sitter-c',
+                    'vendor/tree-sitter-cpp',
+                    'vendor/tree-sitter-c-sharp',
+                    'vendor/tree-sitter-rust',
+                    'vendor/tree-sitter-javascript',
                     'vendor/tree-sitter-python'
                 ]
             )
-        self.ts = Parser()
-        self.ts.set_language(PY_LANGUAGE)
-        self.tree = None
 
-        if code:
-            self.parseCode(code)
+        self.ts = Parser()
+        self.tree = None
 
     def __repr__(self):
         if self.tree:
@@ -49,7 +68,9 @@ class TSWrapper:
         else:
             return "<empty tree>"
 
-    def parseCode(self, code):
+    def parseCode(self, path):
+        self.ts.set_language(getLang(path))
+        code = open(path).read()
         self.code = code.splitlines()
         self.codeBytes = bytes(code, "utf8")
         self.tree = self.ts.parse(self.codeBytes)
@@ -61,6 +82,7 @@ class TSWrapper:
         allFuncs = {}
         globalFuncs = []
         while True:
+            # print(cursor.node)
             if (cursor.node.type == "function_definition"):
                 # print(cursor.node)
                 globalFuncs.append(self.__parseFuncs(cursor.node))
@@ -94,7 +116,7 @@ class TSWrapper:
         ''' return dict of all functions in root_node '''
         func = {}
         for child in root_node.children:
-            # print(child)
+            # print(f"\t{child}")
             if (child.type == "identifier"):
                 func['name'] = self.__stringFromNodeBytes(child)
             elif (child.type == "parameters"):
